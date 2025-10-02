@@ -1,8 +1,8 @@
+```python
 import os
 import streamlit as st
 import base64
 from openai import OpenAI
-import openai
 from PIL import Image
 import numpy as np
 from streamlit_drawable_canvas import st_canvas
@@ -32,7 +32,7 @@ st.title('🖌️ Tablero Inteligente: Historias y Chistes con tus Dibujos')
 
 with st.sidebar:
     st.subheader("Acerca de:")
-    st.write("En esta aplicación puedes **dibujar un boceto** y la IA lo analizará para luego crear una historia infantil o un chiste relacionado con lo que dibujaste.")
+    st.write("Dibuja un boceto y la IA lo analizará para luego crear una historia infantil o un chiste relacionado.")
 
 st.subheader("✏️ Dibuja el boceto en el panel y presiona el botón para analizarlo")
 
@@ -56,16 +56,17 @@ canvas_result = st_canvas(
 
 # Ingreso de API Key
 ke = st.text_input('🔑 Ingresa tu API Key de OpenAI', type="password")
-os.environ['OPENAI_API_KEY'] = ke
-api_key = os.environ['OPENAI_API_KEY']
+api_key = ke
 
-# Inicializar cliente de OpenAI
-client = OpenAI(api_key=api_key)
+# Inicializar cliente de OpenAI solo si hay clave
+client = None
+if api_key:
+    client = OpenAI(api_key=api_key)
 
 # Botón de análisis
 analyze_button = st.button("🔍 Analizar dibujo", type="secondary")
 
-if canvas_result.image_data is not None and api_key and analyze_button:
+if canvas_result.image_data is not None and client and analyze_button:
     with st.spinner("Analizando ..."):
         # Guardar imagen dibujada
         input_numpy_array = np.array(canvas_result.image_data)
@@ -81,7 +82,7 @@ if canvas_result.image_data is not None and api_key and analyze_button:
         try:
             full_response = ""
             message_placeholder = st.empty()
-            response = openai.chat.completions.create(
+            response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
                     {
@@ -122,7 +123,7 @@ if st.session_state.analysis_done:
         with st.spinner("Creando historia..."):
             story_prompt = f"Basándote en esta descripción: '{st.session_state.full_response}', crea una historia infantil breve y entretenida. La historia debe ser creativa y apropiada para niños."
             
-            story_response = openai.chat.completions.create(
+            story_response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": story_prompt}],
                 max_tokens=500,
@@ -142,7 +143,7 @@ if st.session_state.analysis_done:
         with st.spinner("Pensando un chiste..."):
             joke_prompt = f"A partir de esta descripción: '{st.session_state.full_response}', crea un {estilo.lower()} en español, corto y divertido, relacionado con el dibujo."
 
-            joke_response = openai.chat.completions.create(
+            joke_response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": joke_prompt}],
                 max_tokens=150,
@@ -154,4 +155,5 @@ if st.session_state.analysis_done:
 # Advertencia si falta API key
 if not api_key:
     st.warning("⚠️ Por favor ingresa tu API Key para continuar.")
+```
 
